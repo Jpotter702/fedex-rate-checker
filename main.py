@@ -7,7 +7,8 @@ import requests  # This is needed for making HTTP requests
 from datetime import datetime, timedelta
 
 # 📦 Import custom rates module (used to handle FedEx rate API)
-from app import rates
+from app import rates  # Ensure the import statement for rates is correct
+from app.rates import router as rates_router  # Import the router from rates.py
 
 # Ensure all dependencies are installed using `pip install -r requirements.txt`
 # This includes FastAPI, Uvicorn, python-dotenv, and requests.
@@ -74,4 +75,4 @@ async def get_token():
 
 # ===== Route Module Registration =====
 # Includes external routes from app/rates.py into this FastAPI app
-app.include_router(rates.router)
+app.include_router(rates_router, prefix="/rates")
