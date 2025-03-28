@@ -1,5 +1,5 @@
 # ===== Imports and Setup =====
-from fastapi import FastAPI
+from fastapi import FastAPI, HTTPException
 from dotenv import load_dotenv
 from pathlib import Path
 import os
@@ -17,23 +17,23 @@ client_id = os.getenv("FEDEX_CLIENT_ID")
 client_secret = os.getenv("FEDEX_CLIENT_SECRET")
 account_number = os.getenv("FEDEX_ACCOUNT_NUMBER")
 
+# Validate environment variables
+if not all([client_id, client_secret, account_number]):
+    raise RuntimeError("Missing required environment variables. Please check your .env file.")
+
 # ===== FastAPI App Initialization =====
 app = FastAPI()
 
 # ===== Root Endpoint =====
 # Simple GET route to confirm the server is running and environment is loaded
 @app.get("/")
-def read_root():
-    return {
-        "message": "API is running",
-        "client_id": client_id,
-        "account_number": account_number
-    }
+async def root():
+    return {"message": "FedEx Rate Checker API is running"}
 
 # ===== Bearer Token Endpoint =====
 # Route to retrieve FedEx sandbox OAuth token
 @app.get("/get-token")
-def get_token():
+async def get_token():
     url = "https://apis-sandbox.fedex.com/oauth/token"
     headers = {
         "Content-Type": "application/x-www-form-urlencoded"
@@ -44,15 +44,12 @@ def get_token():
         "client_secret": client_secret
     }
 
-    response = requests.post(url, data=data, headers=headers)
-
-    if response.status_code == 200:
+    try:
+        response = requests.post(url, data=data, headers=headers)
+        response.raise_for_status()
         return response.json()
-    else:
-        return {
-            "error": response.status_code,
-            "details": response.text
-        }
+    except requests.exceptions.RequestException as e:
+        raise HTTPException(status_code=500, detail="Failed to retrieve token") from e
 
 # ===== Route Module Registration =====
 # Includes external routes from app/rates.py into this FastAPI app
