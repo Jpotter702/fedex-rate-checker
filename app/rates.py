@@ -4,7 +4,7 @@ import requests
 import os
 from dotenv import load_dotenv
 from pathlib import Path
-from app.main import get_token  # Import the token retrieval function
+from datetime import datetime, timedelta
 
 # ===== Environment Loading (if not already loaded) =====
 env_path = Path(__file__).parent.parent / ".env"
@@ -13,6 +13,34 @@ load_dotenv(dotenv_path=env_path)
 client_id = os.getenv("FEDEX_CLIENT_ID")
 client_secret = os.getenv("FEDEX_CLIENT_SECRET")
 account_number = os.getenv("FEDEX_ACCOUNT_NUMBER")
+
+# ===== Token Cache =====
+token_cache = {
+    "token": None,
+    "expires_at": None
+}
+
+def get_token():
+    """
+    Retrieve a FedEx API token with caching to avoid redundant requests.
+    """
+    if token_cache["token"] and token_cache["expires_at"] > datetime.utcnow():
+        return {"access_token": token_cache["token"]}
+
+    url = "https://apis-sandbox.fedex.com/oauth/token"
+    headers = {"Content-Type": "application/x-www-form-urlencoded"}
+    data = {"grant_type": "client_credentials", "client_id": client_id, "client_secret": client_secret}
+
+    try:
+        response = requests.post(url, data=data, headers=headers)
+        response.raise_for_status()
+        token_data = response.json()
+
+        token_cache["token"] = token_data["access_token"]
+        token_cache["expires_at"] = datetime.utcnow() + timedelta(seconds=token_data["expires_in"])
+        return {"access_token": token_cache["token"]}
+    except requests.exceptions.RequestException as e:
+        raise HTTPException(status_code=500, detail=f"Failed to retrieve token: {str(e)}")
 
 # ===== FastAPI Router Initialization =====
 router = APIRouter()

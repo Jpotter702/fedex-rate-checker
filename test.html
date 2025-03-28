@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FedEx Rate Checker</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+        }
+        form {
+            max-width: 400px;
+            margin: auto;
+        }
+        label {
+            display: block;
+            margin-bottom: 5px;
+        }
+        input {
+            width: 100%;
+            padding: 8px;
+            margin-bottom: 15px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+        }
+        button {
+            padding: 10px 15px;
+            background-color: #007bff;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        button:hover {
+            background-color: #0056b3;
+        }
+        .result {
+            margin-top: 20px;
+            padding: 10px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            background-color: #f9f9f9;
+        }
+    </style>
+</head>
+<body>
+    <h1>FedEx Rate Checker</h1>
+    <form id="rateForm">
+        <label for="originZip">Origin ZIP Code:</label>
+        <input type="text" id="originZip" name="originZip" required>
+
+        <label for="destinationZip">Destination ZIP Code:</label>
+        <input type="text" id="destinationZip" name="destinationZip" required>
+
+        <label for="weight">Weight (lbs):</label>
+        <input type="number" id="weight" name="weight" required>
+
+        <label for="dimensions">Dimensions (LxWxH in inches):</label>
+        <input type="text" id="dimensions" name="dimensions" placeholder="e.g., 12x12x12" required>
+
+        <button type="submit">Get Rates</button>
+    </form>
+
+    <div id="result" class="result" style="display: none;"></div>
+
+    <script>
+        document.getElementById("rateForm").addEventListener("submit", async function (event) {
+            event.preventDefault();
+
+            // Collect form data
+            const originZip = document.getElementById("originZip").value;
+            const destinationZip = document.getElementById("destinationZip").value;
+            const weight = parseFloat(document.getElementById("weight").value);
+            const dimensions = document.getElementById("dimensions").value.split("x").map(Number);
+
+            // Prepare the payload
+            const payload = {
+                origin_zip: originZip,
+                origin_country: "US",
+                destination_zip: destinationZip,
+                destination_country: "US",
+                weight: weight,
+                dimensions: {
+                    length: dimensions[0],
+                    width: dimensions[1],
+                    height: dimensions[2]
+                },
+                account_number: "740561111" // Hardcoded test account number
+            };
+
+            try {
+                // Send POST request to the FastAPI backend
+                const response = await fetch("http://127.0.0.1:8000/rates/get-rates", {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json"
+                    },
+                    body: JSON.stringify(payload)
+                });
+
+                // Handle the response
+                const resultDiv = document.getElementById("result");
+                if (response.ok) {
+                    const data = await response.json();
+                    resultDiv.style.display = "block";
+                    resultDiv.innerHTML = `<pre>${JSON.stringify(data, null, 2)}</pre>`;
+                } else {
+                    const error = await response.json();
+                    resultDiv.style.display = "block";
+                    resultDiv.innerHTML = `<p style="color: red;">Error: ${error.detail}</p>`;
+                }
+            } catch (error) {
+                const resultDiv = document.getElementById("result");
+                resultDiv.style.display = "block";
+                resultDiv.innerHTML = `<p style="color: red;">Error: ${error.message}</p>`;
+            }
+        });
+    </script>
+</body>
+</html>

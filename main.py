@@ -42,37 +42,6 @@ token_cache = {
 async def root():
     return {"message": "FedEx Rate Checker API is running"}
 
-# ===== Bearer Token Endpoint with Caching =====
-@app.get("/get-token")
-async def get_token():
-    # Check if the token is cached and still valid
-    if token_cache["token"] and token_cache["expires_at"] > datetime.utcnow():
-        return {"access_token": token_cache["token"], "expires_at": token_cache["expires_at"]}
-
-    # If no valid token is cached, request a new one
-    url = "https://apis-sandbox.fedex.com/oauth/token"
-    headers = {
-        "Content-Type": "application/x-www-form-urlencoded"
-    }
-    data = {
-        "grant_type": "client_credentials",
-        "client_id": client_id,
-        "client_secret": client_secret
-    }
-
-    try:
-        response = requests.post(url, data=data, headers=headers)
-        response.raise_for_status()
-        token_data = response.json()
-
-        # Cache the new token and its expiration time
-        token_cache["token"] = token_data["access_token"]
-        token_cache["expires_at"] = datetime.utcnow() + timedelta(seconds=token_data["expires_in"])
-
-        return {"access_token": token_cache["token"], "expires_at": token_cache["expires_at"]}
-    except requests.exceptions.RequestException as e:
-        raise HTTPException(status_code=500, detail="Failed to retrieve token") from e
-
 # ===== Route Module Registration =====
 # Includes external routes from app/rates.py into this FastAPI app
 app.include_router(rates_router, prefix="/rates")
