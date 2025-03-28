@@ -46,7 +46,7 @@ def get_token():
 router = APIRouter()
 
 # ===== FedEx Rates Endpoint =====
-@router.post("/get-rates", methods=["POST"])  # Explicitly allow POST method
+@router.post("/get-rates")  # Removed methods=["POST"]
 async def get_rates(
     shipment_details: dict,
     token: dict = Depends(get_token)  # Automatically fetch the token
